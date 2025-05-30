@@ -6,50 +6,38 @@ import (
 )
 
 type Client struct {
-	BaseURL    string
-	Port       int
-	HTTPClient *http.Client
+	host       string
+	httpClient *http.Client
 }
 
-type ClientOption func(*Client)
+type ClientOption struct {
+	host    string
+	timeout time.Duration
+}
 
-func WithPort(port int) ClientOption {
-	return func(c *Client) {
-		c.Port = port
+type ClientOptionFunc func(*ClientOption)
+
+func WithTimeout(timeout time.Duration) ClientOptionFunc {
+	return func(c *ClientOption) {
+		c.timeout = timeout
 	}
 }
 
-func WithBaseURL(baseURL string) ClientOption {
-	return func(c *Client) {
-		c.BaseURL = baseURL
-	}
-}
+func NewClient(host string, options ...ClientOptionFunc) *Client {
 
-func WithHTTPClient(httpClient *http.Client) ClientOption {
-	return func(c *Client) {
-		c.HTTPClient = httpClient
-	}
-}
-
-func WithTimeout(timeout time.Duration) ClientOption {
-	return func(c *Client) {
-		c.HTTPClient.Timeout = timeout
-	}
-}
-
-func NewClient(options ...ClientOption) *Client {
-
-	client := &Client{
-		BaseURL: "http://localhost",
-		Port: "6969"
-		HTTPClient: &http.Client{
-			Timeout: 10 * time.Second,
-		}
+	opts := &ClientOption{
+		host:    host,
+		timeout: 10 * time.Second, // default time
 	}
 
 	for _, opt := range options {
-		opt(client)
+		opt(opts)
 	}
 
-	return client
+	return &Client{
+		host: opts.host,
+		httpClient: &http.Client{
+			Timeout: opts.timeout,
+		},
+	}
 }

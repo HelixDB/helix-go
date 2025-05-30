@@ -8,9 +8,9 @@ import (
 	"net/http"
 )
 
-type HelixInput map[string]interface{}
+type HelixInput map[string]any
 
-type HelixResponse map[string]interface{}
+type HelixResponse map[string]any
 
 func (c *Client) Query(endpoint string, data HelixInput) (*HelixResponse, error) {
 	jsonData, err := json.Marshal(data)
@@ -18,7 +18,7 @@ func (c *Client) Query(endpoint string, data HelixInput) (*HelixResponse, error)
 		return nil, fmt.Errorf("failed to marshal input data: %w", err)
 	}
 
-	url := fmt.Sprintf("%s:%i/query", c.BaseURL, c.Port, endpoint)
+	url := fmt.Sprintf("%s/%s", c.host, endpoint)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -27,7 +27,7 @@ func (c *Client) Query(endpoint string, data HelixInput) (*HelixResponse, error)
 	req.Header.Set("Content-Type", "application/json")
 	// Authorization token in the future maybe?
 
-	res, err := c.HTTPClient.Do(req)
+	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
