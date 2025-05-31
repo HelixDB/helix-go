@@ -12,14 +12,37 @@ type HelixInput map[string]any
 
 type HelixResponse map[string]any
 
-func (c *Client) Query(endpoint string, data HelixInput) (*HelixResponse, error) {
+type QueryOption struct {
+	data HelixInput
+}
+
+type QueryOptionFunc func(*QueryOption)
+
+func WithData(data HelixInput) QueryOptionFunc {
+	return func(q *QueryOption) {
+		q.data = data
+	}
+}
+
+func (c *Client) Query(endpoint string, opts ...QueryOptionFunc) (HelixResponse, error) {
+
+	option := QueryOption{}
+	for _, opt := range opts {
+		opt(&option)
+	}
+
+	data := option.data
+	if data == nil {
+		data = make(HelixInput)
+	}
+
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal input data: %w", err)
 	}
 
-	url := fmt.Sprintf("%s/%s", c.host, endpoint)
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	url := c.host + endpoint
+	req, err := http.NewRequest("POST", url, bytes.NewReader(jsonData))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -33,19 +56,15 @@ func (c *Client) Query(endpoint string, data HelixInput) (*HelixResponse, error)
 	}
 	defer res.Body.Close()
 
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %w", err)
-	}
-
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
+		body, _ := io.ReadAll(res.Body)
 		return nil, fmt.Errorf("HTTP error %d: %s", res.StatusCode, string(body))
 	}
 
 	var response HelixResponse
-	if err := json.Unmarshal(body, &response); err != nil {
+	if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
-	return &response, nil
+	return response, nil
 }
