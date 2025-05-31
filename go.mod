@@ -1,3 +1,3 @@
-module github.com/juanmartin8a/helix-go
+module github.com/HelixDB/helix-go
 
 go 1.24.3

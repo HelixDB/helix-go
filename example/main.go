@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	helix "github.com/juanmartin8a/helix-go"
+	helix "github.com/HelixDB/helix-go"
 )
 
 var HelixClient *helix.Client
