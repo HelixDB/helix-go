@@ -2,6 +2,7 @@ package helix
 
 import (
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -18,26 +19,30 @@ type ClientOption struct {
 type ClientOptionFunc func(*ClientOption)
 
 func WithTimeout(timeout time.Duration) ClientOptionFunc {
-	return func(c *ClientOption) {
-		c.timeout = timeout
+	return func(o *ClientOption) {
+		o.timeout = timeout
 	}
 }
 
-func NewClient(host string, options ...ClientOptionFunc) *Client {
+func NewClient(host string, opts ...ClientOptionFunc) *Client {
 
-	opts := &ClientOption{
+	if !strings.HasSuffix(host, "/") {
+		host = host + "/"
+	}
+
+	option := ClientOption{
 		host:    host,
 		timeout: 10 * time.Second, // default time
 	}
 
-	for _, opt := range options {
-		opt(opts)
+	for _, opt := range opts {
+		opt(&option)
 	}
 
 	return &Client{
-		host: opts.host,
+		host: option.host,
 		httpClient: &http.Client{
-			Timeout: opts.timeout,
+			Timeout: option.timeout,
 		},
 	}
 }
