@@ -1,6 +1,5 @@
 # helix-go
-Official Go package for working with HelixDB
-
+The official Go SDK for HelixDB
 
 ## Getting Started
 
