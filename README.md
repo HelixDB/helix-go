@@ -15,6 +15,7 @@ helix init
 #### Create a HelixQL schema
 
 ```js
+// ./helixdb-cfg/schema.hx
 N::User {
     name: String,
     age: U32,
@@ -27,7 +28,7 @@ N::User {
 #### Create HelixQL queries
 
 ```js
-// ./<path-to-helix-directory>/queries.hx
+// ./helixdb-cfg/queries.hx
 QUERY create_user(name: String, age: U32, email: String, now: I32) =>
     user <- AddN<User>({name: name, age: age, email: email, created_at: now, updated_at: now})
     RETURN user
