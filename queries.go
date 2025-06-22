@@ -112,6 +112,8 @@ func (r *HelixResponse) Scan(dest any) error {
 		return r.err
 	}
 
+	fmt.Println(string(r.bytes))
+
 	rv := reflect.ValueOf(dest)
 	if rv.Kind() != reflect.Ptr {
 		return fmt.Errorf("scan destination must be a pointer")
