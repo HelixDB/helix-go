@@ -6,25 +6,36 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"reflect"
 )
 
 type HelixInput map[string]any
 
-type HelixResponse map[string]any
+type HelixResponse struct {
+	bytes []byte
+	err   error
+}
 
 type QueryOption struct {
-	data HelixInput
+	data     HelixInput
+	datatype any
 }
 
 type QueryOptionFunc func(*QueryOption)
 
 func WithData(data HelixInput) QueryOptionFunc {
-	return func(q *QueryOption) {
-		q.data = data
+	return func(o *QueryOption) {
+		o.data = data
 	}
 }
 
-func (c *Client) Query(endpoint string, opts ...QueryOptionFunc) (HelixResponse, error) {
+func WithTarget(datatype any) QueryOptionFunc {
+	return func(o *QueryOption) {
+		o.datatype = datatype
+	}
+}
+
+func (c *Client) Query(endpoint string, opts ...QueryOptionFunc) *HelixResponse {
 
 	option := QueryOption{}
 	for _, opt := range opts {
@@ -38,13 +49,19 @@ func (c *Client) Query(endpoint string, opts ...QueryOptionFunc) (HelixResponse,
 
 	jsonData, err := json.Marshal(data)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal input data: %w", err)
+		return &HelixResponse{
+			bytes: nil,
+			err:   fmt.Errorf("failed to marshal input data: %w", err),
+		}
 	}
 
 	url := c.host + endpoint
 	req, err := http.NewRequest("POST", url, bytes.NewReader(jsonData))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return &HelixResponse{
+			bytes: nil,
+			err:   fmt.Errorf("failed to create request: %w", err),
+		}
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -52,19 +69,57 @@ func (c *Client) Query(endpoint string, opts ...QueryOptionFunc) (HelixResponse,
 
 	res, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to send request: %w", err)
+		return &HelixResponse{
+			bytes: nil,
+			err:   fmt.Errorf("failed to send request: %w", err),
+		}
 	}
 	defer res.Body.Close()
 
+	body, _ := io.ReadAll(res.Body)
+
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		body, _ := io.ReadAll(res.Body)
-		return nil, fmt.Errorf("HTTP error %d: %s", res.StatusCode, string(body))
+		return &HelixResponse{
+			bytes: nil,
+			err:   fmt.Errorf("HTTP error %d: %s", res.StatusCode, string(body)),
+		}
 	}
 
-	var response HelixResponse
-	if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+	return &HelixResponse{
+		bytes: body,
+		err:   nil,
+	}
+}
+
+func (r *HelixResponse) AsMap() (map[string]any, error) {
+
+	if r.err != nil {
+		return nil, r.err
 	}
 
-	return response, nil
+	var mapResponse map[string]any
+	err := json.Unmarshal(r.bytes, &mapResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	return mapResponse, nil
+}
+
+func (r *HelixResponse) Scan(dest any) error {
+
+	if r.err != nil {
+		return r.err
+	}
+
+	rv := reflect.ValueOf(dest)
+	if rv.Kind() != reflect.Ptr {
+		return fmt.Errorf("scan destination must be a pointer")
+	}
+
+	if rv.IsNil() {
+		return fmt.Errorf("scan destination cannot be nil")
+	}
+
+	return json.Unmarshal(r.bytes, dest)
 }
