@@ -9,21 +9,19 @@ import (
 	"reflect"
 )
 
-type HelixInput map[string]any
-
 type HelixResponse struct {
 	bytes []byte
 	err   error
 }
 
 type QueryOption struct {
-	data     HelixInput
+	data     any
 	datatype any
 }
 
 type QueryOptionFunc func(*QueryOption)
 
-func WithData(data HelixInput) QueryOptionFunc {
+func WithData(data any) QueryOptionFunc {
 	return func(o *QueryOption) {
 		o.data = data
 	}
@@ -42,12 +40,7 @@ func (c *Client) Query(endpoint string, opts ...QueryOptionFunc) *HelixResponse 
 		opt(&option)
 	}
 
-	data := option.data
-	if data == nil {
-		data = make(HelixInput)
-	}
-
-	jsonData, err := json.Marshal(data)
+	jsonData, err := marshalInput(option.data)
 	if err != nil {
 		return &HelixResponse{
 			bytes: nil,
@@ -81,7 +74,7 @@ func (c *Client) Query(endpoint string, opts ...QueryOptionFunc) *HelixResponse 
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
 		return &HelixResponse{
 			bytes: nil,
-			err:   fmt.Errorf("HTTP error %d: %s", res.StatusCode, string(body)),
+			err:   fmt.Errorf("%d: %s", res.StatusCode, string(body)),
 		}
 	}
 
@@ -112,8 +105,6 @@ func (r *HelixResponse) Scan(dest any) error {
 		return r.err
 	}
 
-	fmt.Println(string(r.bytes))
-
 	rv := reflect.ValueOf(dest)
 	if rv.Kind() != reflect.Ptr {
 		return fmt.Errorf("scan destination must be a pointer")
@@ -124,4 +115,45 @@ func (r *HelixResponse) Scan(dest any) error {
 	}
 
 	return json.Unmarshal(r.bytes, dest)
+}
+
+func marshalInput(input any) ([]byte, error) {
+	if input == nil {
+		return []byte("{}"), nil
+	}
+
+	switch v := input.(type) {
+	case string:
+		if !json.Valid([]byte(v)) {
+			return nil, fmt.Errorf("provided string is not valid JSON")
+		}
+		return []byte(v), nil
+	case []byte:
+		if !json.Valid(v) {
+			return nil, fmt.Errorf("provided byte slice is not valid JSON")
+		}
+		return v, nil
+	}
+
+	val := reflect.ValueOf(input)
+
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
+
+	switch val.Kind() {
+	case reflect.Struct, reflect.Map:
+		return json.Marshal(input)
+
+	case reflect.Slice, reflect.Array:
+		return nil, fmt.Errorf(
+			"input data cannot be a slice or array; it must be a struct or map to produce a key-value object",
+		)
+
+	default:
+		return nil, fmt.Errorf(
+			"unsupported input data type: %s. Input must be a struct or a map",
+			val.Kind(),
+		)
+	}
 }
