@@ -64,7 +64,7 @@ func main() {
 	var users GetUsersResponse
 	err = HelixClient.Query("get_users").Scan(&users)
 	if err != nil {
-		log.Fatalf("Error while creating user: %s", err)
+		log.Fatalf("Error while getting users: %s", err)
 	}
 
 	fmt.Println(users.Users)
@@ -72,7 +72,7 @@ func main() {
 	// Get all users in a go's `map` data type
 	usersMap, err := HelixClient.Query("get_users").AsMap()
 	if err != nil {
-		log.Fatalf("Error while creating user: %s", err)
+		log.Fatalf("Error while getting users: %s", err)
 	}
 
 	fmt.Println(usersMap["users"])
