@@ -69,7 +69,7 @@ func main() {
 
 	fmt.Println(users.Users)
 
-	// Get all users but put them in a `map` datatype
+	// Get all users in a go's `map` data type
 	usersMap, err := HelixClient.Query("get_users").AsMap()
 	if err != nil {
 		log.Fatalf("Error while creating user: %s", err)
