@@ -99,12 +99,103 @@ func (r *HelixResponse) AsMap() (map[string]any, error) {
 	return mapResponse, nil
 }
 
-func (r *HelixResponse) Scan(dest any) error {
+type ScanOption struct {
+	dest any
+	name string
+}
+
+type ScanOptionFunc func(*ScanOption)
+
+func WithDest(name string, dest any) ScanOptionFunc {
+	return func(o *ScanOption) {
+		o.name = name
+		o.dest = dest
+	}
+}
+
+func (r *HelixResponse) Scan(args ...any) error {
 
 	if r.err != nil {
 		return r.err
 	}
 
+	if len(args) == 0 {
+		return fmt.Errorf("scan destination is expected")
+	}
+
+	if len(args) == 1 {
+		err := validateDestPointer(args[0])
+		if err != nil {
+			optFunc, err := validateDestOption(args[0])
+			if err != nil {
+				fmt.Println(0)
+				return err
+			}
+
+			var jsonData map[string]json.RawMessage
+
+			err = json.Unmarshal(r.bytes, &jsonData)
+			if err != nil {
+				return fmt.Errorf("invalid json response: %w", err)
+			}
+
+			err = scanOption(optFunc, jsonData)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		}
+
+		return json.Unmarshal(r.bytes, args[0])
+
+	}
+
+	var jsonData map[string]json.RawMessage
+
+	err := json.Unmarshal(r.bytes, &jsonData)
+	if err != nil {
+		return fmt.Errorf("invalid json response: %w", err)
+	}
+
+	for _, arg := range args {
+		optFunc, ok := arg.(ScanOptionFunc)
+		if !ok {
+			return fmt.Errorf("invalid scan argument type %T (expected struct pointer, map pointer, or WithDest(...))", arg)
+		}
+
+		err := scanOption(optFunc, jsonData)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func scanOption(optFunc ScanOptionFunc, jsonData map[string]json.RawMessage) error {
+	var opt ScanOption
+	optFunc(&opt)
+
+	err := validateDestPointer(opt.dest)
+	if err != nil {
+		return err
+	}
+
+	rawData, ok := jsonData[opt.name]
+	if !ok {
+		return fmt.Errorf("field \"%s\" not found", opt.name)
+	}
+
+	err = json.Unmarshal(rawData, opt.dest)
+	if err != nil {
+		return fmt.Errorf("failed to scan field \"%s\": %w", opt.name, err)
+	}
+
+	return nil
+}
+
+func validateDestPointer(dest any) error {
 	rv := reflect.ValueOf(dest)
 	if rv.Kind() != reflect.Ptr {
 		return fmt.Errorf("scan destination must be a pointer")
@@ -114,7 +205,16 @@ func (r *HelixResponse) Scan(dest any) error {
 		return fmt.Errorf("scan destination cannot be nil")
 	}
 
-	return json.Unmarshal(r.bytes, dest)
+	return nil
+}
+
+func validateDestOption(dest any) (ScanOptionFunc, error) {
+	optFunc, ok := dest.(ScanOptionFunc)
+	if !ok {
+		return nil, fmt.Errorf("invalid scan argument type %T (expected struct pointer, map pointer, or WithDest(...))", dest)
+	}
+
+	return optFunc, nil
 }
 
 func marshalInput(input any) ([]byte, error) {

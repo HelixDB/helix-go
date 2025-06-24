@@ -4,4 +4,4 @@ QUERY create_user(name: String, age: U32, email: String, now: I32) =>
 
 QUERY get_users() =>
     users <- N<User>
-    RETURN users
+    RETURN users 
