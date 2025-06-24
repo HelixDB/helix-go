@@ -75,7 +75,7 @@ type User struct {
 
 // Create a type struct for the "get_users" query
 type GetUsersResponse struct {
-	Users []User
+	Users []User `json:"users"`
 }
 
 // Create a type struct for the "create_users" query
@@ -89,6 +89,7 @@ func main() {
 	HelixClient = helix.NewClient("http://localhost:6969")
 
 	// Create user data
+
 	now := time.Now()
 
 	timestamp := now.Unix()
@@ -114,19 +115,30 @@ func main() {
 
 	fmt.Println(createdUser)
 
-	// Get all users
-	var users GetUsersResponse
-	err = HelixClient.Query("get_users").Scan(&users)
+	// Get all users and put Helix's response in GetUsersResponse
+	var getUsersResponse GetUsersResponse
+	err = HelixClient.Query("get_users").Scan(&getUsersResponse)
 	if err != nil {
-		log.Fatalf("Error while creating user: %s", err)
+		log.Fatalf("Error while getting users: %s", err)
 	}
 
-	fmt.Println(users.Users)
+	fmt.Println(getUsersResponse)
 
-	// Get all users in a go's `map` data type
+	// Get all users and put "users" from Helix's response in the `users` variable
+	var users []User
+	err = HelixClient.Query("get_users").Scan(
+		helix.WithDest("users", &users),
+	)
+	if err != nil {
+		log.Fatalf("Error while getting users: %s", err)
+	}
+
+	fmt.Println(users)
+
+	// Get all users in go's `map` data type
 	usersMap, err := HelixClient.Query("get_users").AsMap()
 	if err != nil {
-		log.Fatalf("Error while creating user: %s", err)
+		log.Fatalf("Error while getting users: %s", err)
 	}
 
 	fmt.Println(usersMap["users"])
