@@ -30,14 +30,16 @@ QUERY followers(id: ID) =>
     followers <- N<User>(id)::In<Follows>
     RETURN followers 
 
-QUERY follower_count(id: ID) =>
-    count <- N<User>(id)::In<Follows>::COUNT
-    RETURN count 
+// Example to get follower count
+// QUERY follower_count(id: ID) =>
+    // count <- N<User>(id)::In<Follows>::COUNT
+    // RETURN count 
 
 QUERY following(id: ID) =>
     following <- N<User>(id)::Out<Follows>
     RETURN following 
 
-QUERY following_count(id: ID) =>
-    count <- N<User>(id)::Out<Follows>::COUNT
-    RETURN count 
+// Example to get following count
+// QUERY following_count(id: ID) =>
+    // count <- N<User>(id)::Out<Follows>::COUNT
+    // RETURN count 
