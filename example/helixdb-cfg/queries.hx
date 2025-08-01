@@ -16,9 +16,14 @@ QUERY get_users() =>
     users <- N<User>
     RETURN users 
 
-QUERY get_user_by_id(id: ID) =>
-    user <- N<User>(id)
-    RETURN user 
+QUERY delete_user(id: ID) =>
+    DROP N<User>(id)
+    RETURN "Success"
+
+// Example to get user by id
+// QUERY get_user_by_id(id: ID) =>
+    // user <- N<User>(id)
+    // RETURN user 
 
 QUERY follow(followerId: ID, followedId: ID) =>
     follower <- N<User>(followerId)

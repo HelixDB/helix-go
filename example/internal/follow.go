@@ -8,11 +8,15 @@ import (
 	"github.com/HelixDB/helix-go"
 )
 
-func FollowUser(followerId string, followedId int) error {
+type FollowUserInput struct {
+	FollowerId string `json:"followerId"`
+	FollowedId string `json:"followedId"`
+}
+
+func FollowUser(data *FollowUserInput) error {
 	_, err := HelixClient.Query(
 		"follow",
-		helix.WithData(followerId),
-		helix.WithData(followedId),
+		helix.WithData(data),
 	).Raw()
 	if err != nil {
 		err = fmt.Errorf("Error while getting users: %s", err)
@@ -22,10 +26,10 @@ func FollowUser(followerId string, followedId int) error {
 	return nil
 }
 
-func Followers(userId string, users *[]User) error {
+func Followers(data map[string]any, users *[]User) error {
 	err := HelixClient.Query(
 		"followers",
-		helix.WithData(userId),
+		helix.WithData(data),
 	).Scan(
 		helix.WithDest("followers", users),
 	)
@@ -37,27 +41,10 @@ func Followers(userId string, users *[]User) error {
 	return nil
 }
 
-func FollowerCount(userId string) (*int, error) {
-	var count int
-
-	err := HelixClient.Query(
-		"followerCount",
-		helix.WithData(userId),
-	).Scan(
-		helix.WithDest("count", &count),
-	)
-	if err != nil {
-		err = fmt.Errorf("Error while getting \"follower count\": %s", err)
-		return nil, err
-	}
-
-	return &count, nil
-}
-
-func Following(userId string, users *[]User) error {
+func Following(data map[string]any, users *[]User) error {
 	err := HelixClient.Query(
 		"following",
-		helix.WithData(userId),
+		helix.WithData(data),
 	).Scan(
 		helix.WithDest("following", users),
 	)
@@ -67,21 +54,4 @@ func Following(userId string, users *[]User) error {
 	}
 
 	return nil
-}
-
-func FollowingCount(userId string) (*int, error) {
-	var count int
-
-	err := HelixClient.Query(
-		"followingCount",
-		helix.WithData(userId),
-	).Scan(
-		helix.WithDest("count", &count),
-	)
-	if err != nil {
-		err = fmt.Errorf("Error while getting \"following count\": %s", err)
-		return nil, err
-	}
-
-	return &count, nil
 }

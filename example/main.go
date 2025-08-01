@@ -5,87 +5,178 @@ import (
 	"log"
 	"time"
 
-	helix "github.com/HelixDB/helix-go"
+	"example/internal"
 )
 
-var HelixClient *helix.Client
-
-// Create user struct
-type User struct {
-	Name      string
-	Age       int32
-	Email     string
-	CreatedAt int32 `json:"created_at"`
-	UpdatedAt int32 `json:"updated_at"`
-}
-
-// Create a type struct for the "get_users" query
-type GetUsersResponse struct {
-	Users []User `json:"users"`
-}
-
-// Create a type struct for the "create_users" query
-type CreateUserResponse struct {
-	User []User `json:"user"`
-}
-
 func main() {
-
-	// Connect to client
-	HelixClient = helix.NewClient("http://localhost:6969")
-
-	// Create user data
+	// Initialize Helix client
+	internal.ConfigHelix()
+	fmt.Println("✓ Helix client initialized")
 
 	now := time.Now()
+	timestamp32 := int32(now.Unix())
 
-	timestamp := now.Unix()
-
-	timestamp32 := int32(timestamp)
-
+	// Create a user
+	fmt.Println("\n--- Creating first user ---")
 	newUser := map[string]any{
-		"name":  "John",
-		"age":   21,
+		"name":  "John Doe",
+		"age":   25,
 		"email": "johndoe@email.com",
 		"now":   timestamp32,
 	}
 
-	// Create user in Helix
-	var createdUser CreateUserResponse
-	err := HelixClient.Query(
-		"create_user",
-		helix.WithData(newUser),
-	).Scan(&createdUser)
+	var createUserResponse internal.CreateUserResponse
+
+	err := internal.CreateUser(newUser, &createUserResponse)
 	if err != nil {
-		log.Fatalf("Error while creating user: %s", err)
+		log.Fatal(err)
 	}
 
-	fmt.Println(createdUser)
+	fmt.Printf("Create user response: %+v\n", createUserResponse)
 
-	// Get all users and put Helix's response in GetUsersResponse
-	var getUsersResponse GetUsersResponse
-	err = HelixClient.Query("get_users").Scan(&getUsersResponse)
-	if err != nil {
-		log.Fatalf("Error while getting users: %s", err)
+	// Create 2 more users
+	fmt.Println("\n--- Creating 2 more users ---")
+	user2 := map[string]any{
+		"name":  "Jane Smith",
+		"age":   28,
+		"email": "janesmith@email.com",
+		"now":   timestamp32,
+	}
+	user3 := map[string]any{
+		"name":  "Bob Wilson",
+		"age":   32,
+		"email": "bobwilson@email.com",
+		"now":   timestamp32,
 	}
 
-	fmt.Println(getUsersResponse)
-
-	// Get all users and put "users" from Helix's response in the `users` variable
-	var users []User
-	err = HelixClient.Query("get_users").Scan(
-		helix.WithDest("users", &users),
+	twoUsersResult, err := internal.CreateUsers(
+		map[string]any{
+			"users": []map[string]any{user2, user3},
+		},
 	)
 	if err != nil {
-		log.Fatalf("Error while getting users: %s", err)
+		log.Fatal(err)
 	}
 
-	fmt.Println(users)
+	fmt.Printf("Create users response: %+v\n", twoUsersResult)
 
-	// Get all users in go's `map` data type
-	usersMap, err := HelixClient.Query("get_users").AsMap()
+	// Get all users
+	fmt.Println("\n--- Retrieving all users ---")
+	var users []internal.User
+	err = internal.GetAllUsers(&users)
 	if err != nil {
-		log.Fatalf("Error while getting users: %s", err)
+		log.Fatal(err)
 	}
 
-	fmt.Println(usersMap["users"])
+	fmt.Printf("Users:\n")
+	for _, user := range users {
+		fmt.Printf("%+v\n", user)
+	}
+
+	// Add follow relationships
+	fmt.Println("\n--- Creating follow relationships ---")
+
+	followInput1 := &internal.FollowUserInput{
+		FollowerId: users[0].ID,
+		FollowedId: users[1].ID,
+	}
+	err = internal.FollowUser(followInput1)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("%s follows %s\n", users[0].Name, users[1].Name)
+
+	followInput2 := &internal.FollowUserInput{
+		FollowerId: users[1].ID,
+		FollowedId: users[2].ID,
+	}
+	err = internal.FollowUser(followInput2)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("%s follows %s\n", users[1].Name, users[2].Name)
+
+	followInput3 := &internal.FollowUserInput{
+		FollowerId: users[2].ID,
+		FollowedId: users[0].ID,
+	}
+	err = internal.FollowUser(followInput3)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("%s follows %s\n", users[2].Name, users[0].Name)
+
+	followInput4 := &internal.FollowUserInput{
+		FollowerId: users[0].ID,
+		FollowedId: users[2].ID,
+	}
+	err = internal.FollowUser(followInput4)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%s follows %s\n", users[0].Name, users[2].Name)
+
+	followInput5 := &internal.FollowUserInput{
+		FollowerId: users[1].ID,
+		FollowedId: users[0].ID,
+	}
+	err = internal.FollowUser(followInput5)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%s follows %s\n", users[1].Name, users[0].Name)
+
+	fmt.Println("\n--- User Followers and Following ---")
+	for _, user := range users {
+		fmt.Printf("\nUser: %s\n", user.Name)
+		var followers []internal.User
+		err := internal.Followers(
+			map[string]any{
+				"id": user.ID,
+			},
+			&followers,
+		)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		fmt.Println("  Followers:")
+
+		for _, follower := range followers {
+			fmt.Printf("    %s\n", follower.Name)
+		}
+
+		var following []internal.User
+		err = internal.Following(
+			map[string]any{
+				"id": user.ID,
+			},
+			&following,
+		)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		fmt.Println("  Following:")
+
+		for _, userFollowing := range following {
+			fmt.Printf("    %s\n", userFollowing.Name)
+		}
+	}
+
+	// Delete the first user from `users`
+	fmt.Printf("\n--- Delete User: %s ---", users[0].Name)
+	err = internal.DeleteUser(
+		map[string]any{"id": users[0].ID},
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("\n User successfully Deleted")
+
+	fmt.Println("\nExample completed successfully!")
 }
