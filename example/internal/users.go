@@ -34,17 +34,17 @@ func CreateUser(newUser map[string]any, user *CreateUserResponse) error {
 	return nil
 }
 
-func CreateUsers(newUsers map[string]any) (map[string]any, error) {
-	res, err := HelixClient.Query(
+func CreateUsers(newUsers map[string]any) error {
+	_, err := HelixClient.Query(
 		"create_users",
 		helix.WithData(newUsers),
-	).AsMap()
+	).Raw()
 	if err != nil {
 		err = fmt.Errorf("Error while creating users: %s", err)
-		return nil, err
+		return err
 	}
 
-	return res, nil
+	return nil
 }
 
 func UpdateUser(userId string, newUserData map[string]any) error {

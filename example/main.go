@@ -49,7 +49,7 @@ func main() {
 		"now":   timestamp32,
 	}
 
-	twoUsersResult, err := internal.CreateUsers(
+	err = internal.CreateUsers(
 		map[string]any{
 			"users": []map[string]any{user2, user3},
 		},
@@ -58,7 +58,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Create users response: %+v\n", twoUsersResult)
+	fmt.Printf("Success creating users\n")
 
 	// Get all users
 	fmt.Println("\n--- Retrieving all users ---")

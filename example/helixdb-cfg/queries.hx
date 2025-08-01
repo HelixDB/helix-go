@@ -1,10 +1,10 @@
 QUERY create_user(name: String, age: U32, email: String, now: I32) =>
-    user <- AddN<User>({name: name, age: age, email: email, created_at: now, updated_at: now})
+    user <- AddN<User>({name: name, age: age, email: email, created_at: now})
     RETURN user 
 
 QUERY create_users(users: [{name: String, age: U32, email: String, now: I32}]) =>
-    FOR { name, age, email, now } IN users {
-        AddN<User>({name: name, age: age, email: email, created_at: now, updated_at: now})
+    FOR {name, age, email, now} IN users {
+        AddN<User>({name: name, age: age, email: email, created_at: now})
     }
     RETURN "Success" 
 
@@ -17,6 +17,8 @@ QUERY get_users() =>
     RETURN users 
 
 QUERY delete_user(id: ID) =>
+    DROP N<User>(id)::InE<Follows>
+    DROP N<User>(id)::OutE<Follows>
     DROP N<User>(id)
     RETURN "Success"
 
