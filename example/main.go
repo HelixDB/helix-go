@@ -143,10 +143,10 @@ func main() {
 			log.Fatal(err)
 		}
 
-		fmt.Println("  Followers:")
+		fmt.Println("\tFollowers:")
 
 		for _, follower := range followers {
-			fmt.Printf("    %s\n", follower.Name)
+			fmt.Printf("\t\t%s\n", follower.Name)
 		}
 
 		var following []internal.User
@@ -160,10 +160,10 @@ func main() {
 			log.Fatal(err)
 		}
 
-		fmt.Println("  Following:")
+		fmt.Println("\tFollowing:")
 
 		for _, userFollowing := range following {
-			fmt.Printf("    %s\n", userFollowing.Name)
+			fmt.Printf("\t\t%s\n", userFollowing.Name)
 		}
 	}
 
@@ -176,7 +176,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Println("\n User successfully Deleted")
+	fmt.Println("\nUser successfully Deleted")
 
 	fmt.Println("\nExample completed successfully!")
 }
