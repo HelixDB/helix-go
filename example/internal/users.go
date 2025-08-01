@@ -4,8 +4,6 @@ package internal
 
 import (
 	"fmt"
-	"log"
-
 	"github.com/HelixDB/helix-go"
 )
 
@@ -42,7 +40,7 @@ func CreateUsers(newUsers map[string]any) (map[string]any, error) {
 		helix.WithData(newUsers),
 	).AsMap()
 	if err != nil {
-		err = fmt.Errorf("Error while creating user: %s", err)
+		err = fmt.Errorf("Error while creating users: %s", err)
 		return nil, err
 	}
 
@@ -56,7 +54,7 @@ func UpdateUser(userId string, newUserData map[string]any) error {
 		helix.WithData(newUserData),
 	).Raw()
 	if err != nil {
-		log.Printf("Error while creating user: %s", err)
+		err = fmt.Errorf("Error while updating user: %s", err)
 		return err
 	}
 

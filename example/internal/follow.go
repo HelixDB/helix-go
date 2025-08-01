@@ -19,7 +19,7 @@ func FollowUser(data *FollowUserInput) error {
 		helix.WithData(data),
 	).Raw()
 	if err != nil {
-		err = fmt.Errorf("Error while getting users: %s", err)
+		err = fmt.Errorf("Error while following: %s", err)
 		return err
 	}
 
