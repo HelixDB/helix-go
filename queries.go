@@ -15,8 +15,7 @@ type helixResponse struct {
 }
 
 type QueryOption struct {
-	data     any
-	datatype any
+	data any
 }
 
 type QueryOptionFunc func(*QueryOption)
@@ -24,12 +23,6 @@ type QueryOptionFunc func(*QueryOption)
 func WithData(data any) QueryOptionFunc {
 	return func(o *QueryOption) {
 		o.data = data
-	}
-}
-
-func WithTarget(datatype any) QueryOptionFunc {
-	return func(o *QueryOption) {
-		o.datatype = datatype
 	}
 }
 
