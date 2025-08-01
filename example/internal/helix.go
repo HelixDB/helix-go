@@ -5,5 +5,5 @@ import "github.com/HelixDB/helix-go"
 var HelixClient *helix.Client
 
 func ConfigHelix() {
-	HelixClient = helix.NewClient("http://localhost:6977")
+	HelixClient = helix.NewClient("http://localhost:6969")
 }
