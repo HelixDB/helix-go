@@ -19,7 +19,7 @@ func FollowUser(data *FollowUserInput) error {
 		helix.WithData(data),
 	).Raw()
 	if err != nil {
-		err = fmt.Errorf("Error while following: %s", err)
+		err = fmt.Errorf("Error while following: %v", err)
 		return err
 	}
 
@@ -34,7 +34,7 @@ func Followers(data map[string]any, users *[]User) error {
 		helix.WithDest("followers", users),
 	)
 	if err != nil {
-		err = fmt.Errorf("Error while getting \"followers\": %s", err)
+		err = fmt.Errorf("Error while getting \"followers\": %v", err)
 		return err
 	}
 
@@ -49,7 +49,7 @@ func Following(data map[string]any, users *[]User) error {
 		helix.WithDest("following", users),
 	)
 	if err != nil {
-		err = fmt.Errorf("Error while getting \"following\": %s", err)
+		err = fmt.Errorf("Error while getting \"following\": %v", err)
 		return err
 	}
 

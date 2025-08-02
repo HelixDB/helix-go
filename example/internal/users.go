@@ -27,7 +27,7 @@ func CreateUser(newUser map[string]any, user *CreateUserResponse) error {
 		helix.WithData(newUser),
 	).Scan(user)
 	if err != nil {
-		err := fmt.Errorf("Error while creating user: %s", err)
+		err := fmt.Errorf("Error while creating user: %v", err)
 		return err
 	}
 
@@ -40,7 +40,7 @@ func CreateUsers(newUsers map[string]any) error {
 		helix.WithData(newUsers),
 	).Raw()
 	if err != nil {
-		err = fmt.Errorf("Error while creating users: %s", err)
+		err = fmt.Errorf("Error while creating users: %v", err)
 		return err
 	}
 
@@ -67,7 +67,7 @@ func DeleteUser(data map[string]any) error {
 		helix.WithData(data),
 	).Raw()
 	if err != nil {
-		err = fmt.Errorf("Error while deleting user: %s", err)
+		err = fmt.Errorf("Error while deleting user: %v", err)
 		return err
 	}
 
@@ -79,7 +79,7 @@ func GetAllUsers(users *[]User) error {
 		helix.WithDest("users", &users),
 	)
 	if err != nil {
-		err = fmt.Errorf("Error while getting users: %s", err)
+		err = fmt.Errorf("Error while getting users: %v", err)
 		return err
 	}
 

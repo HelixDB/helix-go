@@ -1,16 +1,39 @@
 # helix-go
 
-The official Go SDK for HelixDB - a graph database optimized for real-time queries and complex relationships.
+The official Go SDK for HelixDB 
+
+## Table of Contents
+
+-   [Prerequisites](#prerequisites)
+-   [Installation](#installation)
+-   [Quick Start](#quick-start)
+-   [Client Configuration](#client-configuration)
+-   [Making Queries](#making-queries)
+-   [Handling Responses](#handling-responses)
+-   [Error Handling](#error-handling)
+-   [Complete Example](#complete-example)
+-   [Best Practices](#best-practices)
+-   [Requirements](#requirements)
+
+## Prerequisites
+
+Before using this SDK, ensure you have:
+
+1.  **HelixDB running**: The database should be accessible at your specified host
+2.  **HelixQL schema and queries defined**: Your database schema and query endpoints should be deployed
+
+For HelixDB setup, visit the [official documentation](https://docs.helix-db.com).
 
 ## Installation
 
 ```bash
 go get github.com/HelixDB/helix-go
+
 ```
 
 ## Quick Start
 
-### 1. Initialize the Client
+### Basic Setup
 
 ```go
 package main
@@ -28,20 +51,23 @@ func main() {
     client := helix.NewClient("http://localhost:6969", 
         helix.WithTimeout(30*time.Second))
 }
+
 ```
 
-### 2. Basic Query Structure
+### Basic Query Pattern
 
-All queries follow this pattern:
+All queries follow this simple pattern:
 
 ```go
 response := client.Query("endpoint_name", options...).ResponseMethod()
+
 ```
 
 Where:
-- `endpoint_name` is your HelixQL query name
-- `options` configure the request (data, target types, etc.)
-- `ResponseMethod()` determines how you handle the response
+
+-   `endpoint_name` is your HelixQL query name
+-   `options` configure the request (data, target types, etc.)
+-   `ResponseMethod()` determines how you handle the response
 
 ## Client Configuration
 
@@ -52,23 +78,29 @@ Configure how long the client waits for responses:
 ```go
 client := helix.NewClient("http://localhost:6969", 
     helix.WithTimeout(60*time.Second))
+
 ```
 
-## Query Options
+## Making Queries
 
-### WithData
+### Passing Data with WithData
 
-Pass input data to your query. Accepts multiple data types:
+The `WithData` option lets you pass input data to your queries. It accepts multiple data types:
+
+#### Using Maps (Recommended for flexibility)
 
 ```go
-// Using a map
 userData := map[string]any{
     "name": "John",
     "age":  25,
 }
 client.Query("create_user", helix.WithData(userData))
 
-// Using a struct
+```
+
+#### Using Structs (Recommended for type safety)
+
+```go
 type UserInput struct {
     Name string `json:"name"`
     Age  int    `json:"age"`
@@ -76,28 +108,31 @@ type UserInput struct {
 input := UserInput{Name: "John", Age: 25}
 client.Query("create_user", helix.WithData(input))
 
-// Using JSON string
+```
+
+#### Using JSON Strings
+
+```go
 jsonData := `{"name": "John", "age": 25}`
 client.Query("create_user", helix.WithData(jsonData))
 
-// Using JSON bytes
-jsonBytes := []byte(`{"name": "John", "age": 25}`)
-client.Query("create_user", helix.WithData(jsonBytes))
 ```
 
-### WithTarget
-
-Specify the expected response type (for future SDK enhancements):
+#### Using JSON Bytes
 
 ```go
-client.Query("get_users", helix.WithTarget([]User{}))
+jsonBytes := []byte(`{"name": "John", "age": 25}`)
+client.Query("create_user", helix.WithData(jsonBytes))
+
 ```
 
-## Response Methods
+## Handling Responses
 
-### Scan
+Choose the response method that best fits your needs:
 
-The most flexible method for handling responses. Scan the entire response into a struct or use field-specific scanning.
+### 1. Scan() - Most Flexible
+
+The most powerful method for handling structured responses.
 
 #### Scan Entire Response
 
@@ -112,19 +147,17 @@ if err != nil {
     log.Fatal(err)
 }
 // Access: response.User
+
 ```
 
-#### Scan with WithDest (Field-Specific)
+#### Scan Specific Fields with WithDest
 
-Extract specific fields from the response by name:
+Extract only the fields you need from the response:
 
 ```go
 // Single field extraction
 var users []User
 err := client.Query("get_users").Scan(helix.WithDest("users", &users))
-if err != nil {
-    log.Fatal(err)
-}
 
 // Multiple field extraction
 var users []User
@@ -133,16 +166,18 @@ err := client.Query("get_users_with_count").Scan(
     helix.WithDest("users", &users),
     helix.WithDest("total_count", &totalCount),
 )
+
 ```
 
 **When to use WithDest:**
-- When you only need specific fields from a large response
-- When the response contains multiple top-level fields
-- When you want to avoid creating response wrapper structs
 
-### AsMap
+-   You only need specific fields from a large response
+-   The response contains multiple top-level fields
+-   You want to avoid creating response wrapper structs
 
-Get the response as a Go map for dynamic access:
+### 2. AsMap() - Dynamic Access
+
+Get the response as a Go map for flexible access:
 
 ```go
 responseMap, err := client.Query("get_users").AsMap()
@@ -158,14 +193,16 @@ fmt.Println(users)
 if usersList, ok := responseMap["users"].([]interface{}); ok {
     fmt.Printf("Found %d users\n", len(usersList))
 }
+
 ```
 
 **When to use AsMap:**
-- When response structure is unknown or varies
-- For debugging and exploration
-- When you need flexible access to response data
 
-### Raw
+-   Response structure is unknown or varies
+-   For debugging and exploration
+-   When you need flexible access to response data
+
+### 3. Raw() - Maximum Control
 
 Get the raw byte response from HelixDB:
 
@@ -181,13 +218,14 @@ fmt.Println(string(rawBytes))
 // Manual unmarshaling
 var customResult MyCustomStruct
 err = json.Unmarshal(rawBytes, &customResult)
+
 ```
 
 **When to use Raw:**
-- When you need maximum control over response processing
-- For custom JSON unmarshaling logic
-- When working with streaming or large responses
-- For debugging raw server responses
+
+-   You need maximum control over response processing
+-   For custom JSON unmarshaling logic
+-   You just need to know if the operation succeeded or not
 
 ## Error Handling
 
@@ -200,59 +238,8 @@ if err != nil {
     log.Printf("Query failed: %v", err)
     // Example error: "404: endpoint not found"
 }
+
 ```
-
-Common error scenarios:
-- **HTTP errors**: Status codes with server response
-- **JSON parsing errors**: Invalid response format
-- **Type errors**: Incompatible scan destinations
-- **Network errors**: Connection timeouts or failures
-
-## Data Type Requirements
-
-### Input Data Constraints
-
-```go
-// ✅ Supported input types
-map[string]any{"key": "value"}          // Maps
-MyStruct{Field: "value"}                // Structs
-`{"key": "value"}`                      // JSON strings
-[]byte(`{"key": "value"}`)              // JSON bytes
-
-// ❌ Unsupported input types
-[]string{"item1", "item2"}              // Slices/Arrays
-"plain string"                          // Non-JSON strings
-42                                      // Primitive types
-```
-
-### Scan Destination Requirements
-
-```go
-// ✅ Valid scan destinations (must be pointers)
-var user User
-err := query.Scan(&user)
-
-var users []User
-err := query.Scan(&users)
-
-var result map[string]any
-err := query.Scan(&result)
-
-// ❌ Invalid destinations
-var user User
-err := query.Scan(user)  // Not a pointer
-
-err := query.Scan(nil)   // Nil pointer
-```
-
-## Prerequisites
-
-Before using this SDK, ensure you have:
-
-1. **HelixDB running**: The database should be accessible at your specified host
-2. **HelixQL schema and queries defined**: Your database schema and query endpoints should be deployed
-
-For HelixDB setup, visit the [official documentation](https://docs.helix-db.com).
 
 ## Complete Example
 
@@ -372,21 +359,42 @@ func main() {
     
     fmt.Println("Example completed successfully!")
 }
+
 ```
 
 This example demonstrates:
-- **Client initialization** with default settings
-- **Creating multiple users** with `WithData` and `Scan`
-- **Querying data** with field-specific extraction using `WithDest`
-- **Creating relationships** between users using `Raw()` for operations
-- **Fetching related data** (followers/following) with different response methods
-- **Using AsMap** for flexible response handling
 
-## Requirements
+-   **Client initialization** with default settings
+-   **Creating multiple users** with `WithData` and `Scan`
+-   **Querying data** with field-specific extraction using `WithDest`
+-   **Creating relationships** between users using `Raw()` for operations
+-   **Fetching related data** (followers/following) with different response methods
+-   **Using AsMap** for flexible response handling
 
-- Go 1.24.3 or later
-- HelixDB instance running and accessible
+## Best Practices
 
-## License
+### Choosing the Right Response Method
 
-This SDK is part of the HelixDB ecosystem. Check the repository for license details.
+-   **Use `Scan()`** when you know the response structure and want type safety
+-   **Use `Scan()` with `WithDest()`** when you only need specific fields from large responses
+-   **Use `AsMap()`** for exploration, debugging, or when response structure varies
+-   **Use `Raw()`** when you need custom processing or maximum control
+
+### Error Handling
+
+Always handle errors appropriately:
+
+```go
+if err := client.Query("endpoint").Scan(&result); err != nil {
+    // Log the error with context
+    log.Printf("Failed to execute query 'endpoint': %v", err)
+    // Handle the error based on your application's needs
+    return err
+}
+
+```
+
+### Input Data Types
+
+-   **Prefer structs** for type safety and clearer code
+-   **Use maps** for flexible input scenarios
