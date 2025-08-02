@@ -76,11 +76,58 @@ Configure how long the client waits for responses:
 
 ```go
 client := helix.NewClient("http://localhost:6969", 
-    helix.WithTimeout(60*time.Second))
+    helix.WithTimeout(5*time.Second))
 
 ```
 
 ## Making Queries
+
+### Creating an HQL Schema
+
+```hql
+// schema.hx
+N::User {
+    name: String,
+    age: U32,
+    email: String,
+    created_at: I32,
+}
+
+E::Follows {
+    From: User,
+    To: User,
+    Properties: {
+        since: I32,
+    }
+}
+```
+
+### Creating HQL Queries
+
+```hql
+// queries.hx
+QUERY create_user(name: String, age: U32, email: String, now: I32) =>
+    user <- AddN<User>({name: name, age: age, email: email, created_at: now})
+    RETURN user 
+
+QUERY get_users() =>
+    users <- N<User>
+    RETURN users 
+
+QUERY follow(followerId: ID, followedId: ID) =>
+    follower <- N<User>(followerId)
+    followed <- N<User>(followedId)
+    AddE<Follows>::From(follower)::To(followed)
+    RETURN "Success" 
+
+QUERY followers(id: ID) =>
+    followers <- N<User>(id)::In<Follows>
+    RETURN followers 
+
+QUERY following(id: ID) =>
+    following <- N<User>(id)::Out<Follows>
+    RETURN following 
+```
 
 ### Passing Data with WithData
 
@@ -94,7 +141,6 @@ userData := map[string]any{
     "age":  25,
 }
 client.Query("create_user", helix.WithData(userData))
-
 ```
 
 #### Using Structs (Recommended for type safety)
@@ -106,7 +152,6 @@ type UserInput struct {
 }
 input := UserInput{Name: "John", Age: 25}
 client.Query("create_user", helix.WithData(input))
-
 ```
 
 #### Using JSON Strings
@@ -114,7 +159,6 @@ client.Query("create_user", helix.WithData(input))
 ```go
 jsonData := `{"name": "John", "age": 25}`
 client.Query("create_user", helix.WithData(jsonData))
-
 ```
 
 #### Using JSON Bytes
@@ -122,7 +166,6 @@ client.Query("create_user", helix.WithData(jsonData))
 ```go
 jsonBytes := []byte(`{"name": "John", "age": 25}`)
 client.Query("create_user", helix.WithData(jsonBytes))
-
 ```
 
 ## Handling Responses
@@ -146,7 +189,6 @@ if err != nil {
     log.Fatal(err)
 }
 // Access: response.User
-
 ```
 
 #### Scan Specific Fields with WithDest
@@ -165,7 +207,6 @@ err := client.Query("get_users_with_count").Scan(
     helix.WithDest("users", &users),
     helix.WithDest("total_count", &totalCount),
 )
-
 ```
 
 **When to use WithDest:**
@@ -192,7 +233,6 @@ fmt.Println(users)
 if usersList, ok := responseMap["users"].([]interface{}); ok {
     fmt.Printf("Found %d users\n", len(usersList))
 }
-
 ```
 
 **When to use AsMap:**
@@ -217,7 +257,6 @@ fmt.Println(string(rawBytes))
 // Manual unmarshaling
 var customResult MyCustomStruct
 err = json.Unmarshal(rawBytes, &customResult)
-
 ```
 
 **When to use Raw:**
@@ -237,7 +276,6 @@ if err != nil {
     log.Printf("Query failed: %v", err)
     // Example error: "404: endpoint not found"
 }
-
 ```
 
 ## Complete Example
@@ -245,6 +283,7 @@ if err != nil {
 Here's a comprehensive example demonstrating user management and relationships:
 
 ```go
+// main.go
 package main
 
 import (
@@ -365,7 +404,6 @@ func main() {
     
     fmt.Println("Example completed successfully!")
 }
-
 ```
 
 This example demonstrates:
@@ -397,7 +435,6 @@ if err := client.Query("endpoint").Scan(&result); err != nil {
     // Handle the error based on your application's needs
     return err
 }
-
 ```
 
 ### Input Data Types
