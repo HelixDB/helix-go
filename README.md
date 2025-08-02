@@ -287,122 +287,121 @@ Here's a comprehensive example demonstrating user management and relationships:
 package main
 
 import (
-    "fmt"
-    "log"
-    "time"
-    "github.com/HelixDB/helix-go"
+	"fmt"
+	"github.com/HelixDB/helix-go"
+	"log"
+	"time"
 )
 
 type User struct {
-    ID        string `json:"id"`
-    Name      string `json:"name"`
-    Age       int32  `json:"age"`
-    Email     string `json:"email"`
-    CreatedAt int32  `json:"created_at"`
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Age       int32  `json:"age"`
+	Email     string `json:"email"`
+	CreatedAt int32  `json:"created_at"`
 }
 
 type CreateUserResponse struct {
-    User User `json:"user"`
+	User User `json:"user"`
 }
 
 type FollowUserInput struct {
-    FollowerId string `json:"followerId"`
-    FollowedId string `json:"followedId"`
+	FollowerId string `json:"followerId"`
+	FollowedId string `json:"followedId"`
 }
 
 func main() {
-    // Initialize client
-    client := helix.NewClient("http://localhost:6969")
-    
-    now := int32(time.Now().Unix())
-    
-    // Create first user
-    userData1 := map[string]any{
-        "name":  "Alice Johnson",
-        "age":   28,
-        "email": "alice@example.com",
-        "now":   now,
-    }
-    
-    var createResponse1 CreateUserResponse
-    err := client.Query("create_user", helix.WithData(userData1)).Scan(&createResponse1)
-    if err != nil {
-        log.Fatal(err)
-    }
+	// Initialize client
+	client := helix.NewClient("http://localhost:6969")
 
-    fmt.Printf("\nCreated user 1: %+v\n", createResponse1.User)
-    
-    // Create second user
-    userData2 := map[string]any{
-        "name":  "Bob Smith",
-        "age":   32,
-        "email": "bob@example.com",
-        "now":   now,
-    }
-    
-    var createResponse2 CreateUserResponse
-    err = client.Query("create_user", helix.WithData(userData2)).Scan(&createResponse2)
-    if err != nil {
-        log.Fatal(err)
-    }
+	now := int32(time.Now().Unix())
 
-    fmt.Printf("\nCreated user 2: %+v\n", createResponse2.User)
-    
-    // Get all users using WithDest
-    var users []User
-    err = client.Query("get_users").Scan(helix.WithDest("users", &users))
-    if err != nil {
-        log.Fatal(err)
-    }
+	// Create first user
+	userData1 := map[string]any{
+		"name":  "Alice Johnson",
+		"age":   28,
+		"email": "alice@example.com",
+		"now":   now,
+	}
 
-    fmt.Printf("\nTotal users: %d\n", len(users))
-    
-    // Create follow relationship: Alice follows Bob
-    followData := &FollowUserInput{
-        FollowerId: createResponse1.User.ID,
-        FollowedId: createResponse2.User.ID,
-    }
-    
-    // Use Raw() for operations that don't return structured data
-    _, err = client.Query("follow", helix.WithData(followData)).Raw()
-    if err != nil {
-        log.Fatal(err)
-    }
+	var createResponse1 CreateUserResponse
+	err := client.Query("create_user", helix.WithData(userData1)).Scan(&createResponse1)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-    fmt.Printf("\n%s now follows %s\n", createResponse1.User.Name, createResponse2.User.Name)
-    
-    // Get Bob's followers using WithDest
-    var followers []User
-    err = client.Query("followers", 
-        helix.WithData(map[string]any{"id": createResponse2.User.ID})).
-        Scan(helix.WithDest("followers", &followers))
-    if err != nil {
-        log.Fatal(err)
-    }
+	fmt.Printf("\nCreated user 1: %+v\n", createResponse1.User)
 
-    fmt.Printf("%s has %d followers:\n", createResponse2.User.Name, len(followers))
+	// Create second user
+	userData2 := map[string]any{
+		"name":  "Bob Smith",
+		"age":   32,
+		"email": "bob@example.com",
+		"now":   now,
+	}
 
-    for _, follower := range followers {
-        fmt.Printf("\t%s\n", follower.Name)
-    }
-    
-    // Get Alice's following using AsMap for demonstration
-    followingMap, err := client.Query("following",
-        helix.WithData(map[string]any{"id": createResponse1.User.ID})).AsMap()
-    if err != nil {
-        log.Fatal(err)
-    }
-    
-    if followingList, ok := followingMap["following"].([]interface{}); ok {
-        fmt.Printf("\n%s is following %d users\n", createResponse1.User.Name, len(followingList))
+	var createResponse2 CreateUserResponse
+	err = client.Query("create_user", helix.WithData(userData2)).Scan(&createResponse2)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-        for _, userFollowing := range followingList {
-            fmt.Printf("\t%s\n", userFollowing["name"])
-        }
-    }
+	fmt.Printf("\nCreated user 2: %+v\n", createResponse2.User)
 
-    
-    fmt.Println("Example completed successfully!")
+	// Get all users using WithDest
+	var users []User
+	err = client.Query("get_users").Scan(helix.WithDest("users", &users))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("\nTotal users: %d\n", len(users))
+
+	// Create follow relationship: Alice follows Bob
+	followData := &FollowUserInput{
+		FollowerId: createResponse1.User.ID,
+		FollowedId: createResponse2.User.ID,
+	}
+
+	// Use Raw() for operations that don't return structured data
+	_, err = client.Query("follow", helix.WithData(followData)).Raw()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("\n%s now follows %s\n", createResponse1.User.Name, createResponse2.User.Name)
+
+	// Get Bob's followers using WithDest
+	var followers []User
+	err = client.Query("followers",
+		helix.WithData(map[string]any{"id": createResponse2.User.ID})).
+		Scan(helix.WithDest("followers", &followers))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("\n%s has %d followers:\n", createResponse2.User.Name, len(followers))
+
+	for _, follower := range followers {
+		fmt.Printf("\t%s\n", follower.Name)
+	}
+
+	// Get Alice's following using AsMap for demonstration
+	followingMap, err := client.Query("following",
+		helix.WithData(map[string]any{"id": createResponse1.User.ID})).AsMap()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if followingList, ok := followingMap["following"].([]any); ok {
+		fmt.Printf("\n%s is following %d users\n", createResponse1.User.Name, len(followingList))
+
+		for _, userFollowing := range followingList {
+			fmt.Printf("\t%s\n", userFollowing.(map[string]any)["name"])
+		}
+	}
+
+	fmt.Println("Example completed successfully!")
 }
 ```
 
