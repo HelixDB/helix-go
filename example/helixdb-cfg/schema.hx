@@ -3,7 +3,6 @@ N::User {
     age: U32,
     email: String,
     created_at: I32,
-    updated_at: I32,
 }
 
 E::Follows {
