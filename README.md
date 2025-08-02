@@ -59,15 +59,14 @@ func main() {
 All queries follow this simple pattern:
 
 ```go
-response := client.Query("endpoint_name", options...).ResponseMethod()
+response := client.Query("<endpoint>").ResponseMethod()
 
 ```
 
 Where:
 
--   `endpoint_name` is your HelixQL query name
--   `options` configure the request (data, target types, etc.)
--   `ResponseMethod()` determines how you handle the response
+-   `<endpoint>` is your HelixQL query name
+-   `ResponseMethod()` determines how you handle the response (e.g `.Scan(&pointerToStruct)`)
 
 ## Client Configuration
 
