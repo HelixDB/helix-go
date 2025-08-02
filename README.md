@@ -260,7 +260,6 @@ type User struct {
     Age       int32  `json:"age"`
     Email     string `json:"email"`
     CreatedAt int32  `json:"created_at"`
-    UpdatedAt int32  `json:"updated_at"`
 }
 
 type CreateUserResponse struct {
@@ -291,7 +290,8 @@ func main() {
     if err != nil {
         log.Fatal(err)
     }
-    fmt.Printf("Created user 1: %+v\n", createResponse1.User)
+
+    fmt.Printf("\nCreated user 1: %+v\n", createResponse1.User)
     
     // Create second user
     userData2 := map[string]any{
@@ -306,7 +306,8 @@ func main() {
     if err != nil {
         log.Fatal(err)
     }
-    fmt.Printf("Created user 2: %+v\n", createResponse2.User)
+
+    fmt.Printf("\nCreated user 2: %+v\n", createResponse2.User)
     
     // Get all users using WithDest
     var users []User
@@ -314,7 +315,8 @@ func main() {
     if err != nil {
         log.Fatal(err)
     }
-    fmt.Printf("Total users: %d\n", len(users))
+
+    fmt.Printf("\nTotal users: %d\n", len(users))
     
     // Create follow relationship: Alice follows Bob
     followData := &FollowUserInput{
@@ -327,8 +329,8 @@ func main() {
     if err != nil {
         log.Fatal(err)
     }
-    fmt.Printf("%s now follows %s\n", 
-        createResponse1.User.Name, createResponse2.User.Name)
+
+    fmt.Printf("\n%s now follows %s\n", createResponse1.User.Name, createResponse2.User.Name)
     
     // Get Bob's followers using WithDest
     var followers []User
@@ -338,11 +340,12 @@ func main() {
     if err != nil {
         log.Fatal(err)
     }
-    fmt.Printf("%s has %d followers: ", createResponse2.User.Name, len(followers))
+
+    fmt.Printf("%s has %d followers:\n", createResponse2.User.Name, len(followers))
+
     for _, follower := range followers {
-        fmt.Printf("%s ", follower.Name)
+        fmt.Printf("\t%s\n", follower.Name)
     }
-    fmt.Println()
     
     // Get Alice's following using AsMap for demonstration
     followingMap, err := client.Query("following",
@@ -352,9 +355,13 @@ func main() {
     }
     
     if followingList, ok := followingMap["following"].([]interface{}); ok {
-        fmt.Printf("%s is following %d users\n", 
-            createResponse1.User.Name, len(followingList))
+        fmt.Printf("\n%s is following %d users\n", createResponse1.User.Name, len(followingList))
+
+        for _, userFollowing := range followingList {
+            fmt.Printf("\t%s\n", userFollowing["name"])
+        }
     }
+
     
     fmt.Println("Example completed successfully!")
 }

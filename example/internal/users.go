@@ -13,7 +13,6 @@ type User struct {
 	Age       int32
 	Email     string
 	CreatedAt int32 `json:"created_at"`
-	UpdatedAt int32 `json:"updated_at"`
 }
 
 // Create a type struct for the "create_user" query
