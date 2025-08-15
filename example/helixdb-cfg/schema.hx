@@ -12,3 +12,12 @@ E::Follows {
         since: I32,
     }
 }
+
+V::Preference {
+    preference: String,
+}
+
+E::UserPreference {
+    From: User,
+    To: Preference,
+}

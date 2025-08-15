@@ -27,9 +27,9 @@ QUERY delete_user(id: ID) =>
     // user <- N<User>(id)
     // RETURN user 
 
-QUERY follow(followerId: ID, followedId: ID) =>
-    follower <- N<User>(followerId)
-    followed <- N<User>(followedId)
+QUERY follow(follower_id: ID, followed_id: ID) =>
+    follower <- N<User>(follower_id)
+    followed <- N<User>(followed_id)
     AddE<Follows>::From(follower)::To(followed)
     RETURN "Success" 
 
@@ -50,3 +50,20 @@ QUERY following(id: ID) =>
 // QUERY following_count(id: ID) =>
     // count <- N<User>(id)::Out<Follows>::COUNT
     // RETURN count 
+
+QUERY create_preference(preference: String) =>
+    AddV<Preference>(Embed(preference), {preference: preference})
+    RETURN "Success"
+
+
+QUERY add_preference_to_user(preference: String, user_id: ID) =>
+    user <- N<User>(user_id)
+    preferenceV <- SearchV<Preference>(Embed(preference), 1)
+    AddE<UserPreference>::From(user)::To(preferenceV)
+    RETURN "Success"
+
+QUERY search_users_by_preference(preference: String, limit: I32) =>
+    preferences <- SearchV<Preference>(Embed(preference), 1)
+    users <- preferences::In<UserPreference>::RANGE(0, limit)
+    RETURN users 
+
