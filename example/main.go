@@ -167,6 +167,20 @@ func main() {
 		}
 	}
 
+	// Update the last user from `users`
+	userToUpdate := users[len(users)-1]
+	fmt.Printf("\n--- Update User: %s ---", userToUpdate.Name)
+	userToUpdate.Age = 23
+	err = internal.UpdateUser(userToUpdate)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("User %s successfully updated\n", userToUpdate.Name)
+	fmt.Printf("Old age: %d; New age: %d\n", users[len(users)-1].Age, userToUpdate.Age)
+
+	users[len(users)-1].Age = userToUpdate.Age
+
 	// Delete the first user from `users`
 	fmt.Printf("\n--- Delete User: %s ---", users[0].Name)
 	err = internal.DeleteUser(

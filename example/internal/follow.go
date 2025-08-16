@@ -9,8 +9,8 @@ import (
 )
 
 type FollowUserInput struct {
-	FollowerId string `json:"followerId"`
-	FollowedId string `json:"followedId"`
+	FollowerId string `json:"follower_id"`
+	FollowedId string `json:"followed_id"`
 }
 
 func FollowUser(data *FollowUserInput) error {

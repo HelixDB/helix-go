@@ -8,11 +8,11 @@ import (
 )
 
 type User struct {
-	ID        string
-	Name      string
-	Age       int32
-	Email     string
-	CreatedAt int32 `json:"created_at"`
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Age       int32  `json:"age"`
+	Email     string `json:"email"`
+	CreatedAt int32  `json:"created_at"`
 }
 
 // Create a type struct for the "create_user" query
@@ -46,11 +46,10 @@ func CreateUsers(newUsers map[string]any) error {
 	return nil
 }
 
-func UpdateUser(userId string, newUserData map[string]any) error {
+func UpdateUser(user User) error {
 	_, err := HelixClient.Query(
 		"update_user",
-		helix.WithData(userId),
-		helix.WithData(newUserData),
+		helix.WithData(user),
 	).Raw()
 	if err != nil {
 		err = fmt.Errorf("Error while updating user: %s", err)
