@@ -52,9 +52,8 @@ QUERY following(id: ID) =>
     // RETURN count 
 
 QUERY create_preference(preference: String) =>
-    AddV<Preference>(Embed(preference), {preference: preference})
+    AddV<Preference>(Embed(preference), { preference: preference })
     RETURN "Success"
-
 
 QUERY add_preference_to_user(preference: String, user_id: ID) =>
     user <- N<User>(user_id)
