@@ -129,7 +129,7 @@ func main() {
 	}
 	fmt.Printf("%s follows %s\n", users[1].Name, users[0].Name)
 
-	fmt.Println("\n--- User Followers and Following ---")
+	fmt.Println("\n--- User followers and following ---")
 	for _, user := range users {
 		fmt.Printf("\nUser: %s\n", user.Name)
 		var followers []internal.User
@@ -169,7 +169,7 @@ func main() {
 
 	// Update the last user from `users`
 	userToUpdate := users[len(users)-1]
-	fmt.Printf("\n--- Update User: %s ---", userToUpdate.Name)
+	fmt.Printf("\n--- Update user: %s ---\n", userToUpdate.Name)
 	userToUpdate.Age = 23
 	err = internal.UpdateUser(userToUpdate)
 	if err != nil {
@@ -181,6 +181,86 @@ func main() {
 
 	users[len(users)-1].Age = userToUpdate.Age
 
+	// Create preference
+	newPreference := "cats"
+	newPreference2 := "dogs"
+	fmt.Printf("\n--- Create preferences \"%s\" and \"%s\" ---\n", newPreference, newPreference2)
+	err = internal.CreatePreference(
+		map[string]any{"preference": newPreference},
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("New preference \"%s\" created successfully\n", newPreference)
+
+	err = internal.CreatePreference(
+		map[string]any{"preference": newPreference2},
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("New preference \"%s\" created successfully\n", newPreference2)
+
+	// Add preference to user
+	fmt.Printf("\n--- Add preference \"cats\" to user: %s and %s ---\n", users[0].Name, users[1].Name)
+	err = internal.AddPreferenceToUser(
+		map[string]any{
+			"preference": "cats",
+			"user_id":    users[0].ID,
+		},
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Preference \"cats\" successfully added to user %s\n", users[0].Name)
+
+	err = internal.AddPreferenceToUser(
+		map[string]any{
+			"preference": "cats",
+			"user_id":    users[1].ID,
+		},
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Preference \"cats\" successfully added to user %s\n", users[1].Name)
+
+	err = internal.AddPreferenceToUser(
+		map[string]any{
+			"preference": "dogs",
+			"user_id":    users[2].ID,
+		},
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Preference \"dogs\" successfully added to user %s\n", users[2].Name)
+
+	// Search users by preference
+	fmt.Println("\n--- Search Users by Preference: \"cats\" ---")
+	var usersSearchResults []internal.User
+	err = internal.SearchUsersByPreference(
+		map[string]any{
+			"preference": "cats",
+			"limit":      5,
+		},
+		&usersSearchResults,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Users Search Result:\n")
+	for _, user := range usersSearchResults {
+		fmt.Printf("%+v\n", user.Name)
+	}
+
+	fmt.Println("Users search by preference completed successfully")
+
 	// Delete the first user from `users`
 	fmt.Printf("\n--- Delete User: %s ---", users[0].Name)
 	err = internal.DeleteUser(
@@ -190,7 +270,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Println("\nUser successfully Deleted")
+	fmt.Println("\nUser successfully deleted")
 
 	fmt.Println("\nExample completed successfully!")
 }
