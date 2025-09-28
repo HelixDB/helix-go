@@ -9,14 +9,13 @@ import (
 	"reflect"
 )
 
-type HelixResponse struct {
+type helixResponse struct {
 	bytes []byte
 	err   error
 }
 
 type QueryOption struct {
-	data     any
-	datatype any
+	data any
 }
 
 type QueryOptionFunc func(*QueryOption)
@@ -27,13 +26,7 @@ func WithData(data any) QueryOptionFunc {
 	}
 }
 
-func WithTarget(datatype any) QueryOptionFunc {
-	return func(o *QueryOption) {
-		o.datatype = datatype
-	}
-}
-
-func (c *Client) Query(endpoint string, opts ...QueryOptionFunc) *HelixResponse {
+func (c *Client) Query(endpoint string, opts ...QueryOptionFunc) *helixResponse {
 
 	option := QueryOption{}
 	for _, opt := range opts {
@@ -42,7 +35,7 @@ func (c *Client) Query(endpoint string, opts ...QueryOptionFunc) *HelixResponse 
 
 	jsonData, err := marshalInput(option.data)
 	if err != nil {
-		return &HelixResponse{
+		return &helixResponse{
 			bytes: nil,
 			err:   fmt.Errorf("failed to marshal input data: %w", err),
 		}
@@ -51,7 +44,7 @@ func (c *Client) Query(endpoint string, opts ...QueryOptionFunc) *HelixResponse 
 	url := c.host + endpoint
 	req, err := http.NewRequest("POST", url, bytes.NewReader(jsonData))
 	if err != nil {
-		return &HelixResponse{
+		return &helixResponse{
 			bytes: nil,
 			err:   fmt.Errorf("failed to create request: %w", err),
 		}
@@ -62,7 +55,7 @@ func (c *Client) Query(endpoint string, opts ...QueryOptionFunc) *HelixResponse 
 
 	res, err := c.httpClient.Do(req)
 	if err != nil {
-		return &HelixResponse{
+		return &helixResponse{
 			bytes: nil,
 			err:   fmt.Errorf("failed to send request: %w", err),
 		}
@@ -72,19 +65,23 @@ func (c *Client) Query(endpoint string, opts ...QueryOptionFunc) *HelixResponse 
 	body, _ := io.ReadAll(res.Body)
 
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		return &HelixResponse{
+		return &helixResponse{
 			bytes: nil,
 			err:   fmt.Errorf("%d: %s", res.StatusCode, string(body)),
 		}
 	}
 
-	return &HelixResponse{
+	return &helixResponse{
 		bytes: body,
 		err:   nil,
 	}
 }
 
-func (r *HelixResponse) AsMap() (map[string]any, error) {
+func (r *helixResponse) Raw() ([]byte, error) {
+	return r.bytes, r.err
+}
+
+func (r *helixResponse) AsMap() (map[string]any, error) {
 
 	if r.err != nil {
 		return nil, r.err
@@ -113,7 +110,7 @@ func WithDest(name string, dest any) ScanOptionFunc {
 	}
 }
 
-func (r *HelixResponse) Scan(args ...any) error {
+func (r *helixResponse) Scan(args ...any) error {
 
 	if r.err != nil {
 		return r.err
