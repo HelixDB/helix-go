@@ -1,3 +1,4 @@
+```markdown
 # helix-go
 
 The official Go SDK for HelixDB 
@@ -10,10 +11,8 @@ The official Go SDK for HelixDB
 -   [Client Configuration](#client-configuration)
 -   [Making Queries](#making-queries)
 -   [Handling Responses](#handling-responses)
--   [Error Handling](#error-handling)
 -   [Complete Example](#complete-example)
 -   [Best Practices](#best-practices)
--   [Requirements](#requirements)
 
 ## Prerequisites
 
@@ -28,7 +27,6 @@ For HelixDB setup, visit the [official documentation](https://docs.helix-db.com)
 
 ```bash
 go get github.com/HelixDB/helix-go
-
 ```
 
 ## Quick Start
@@ -48,10 +46,11 @@ func main() {
     client := helix.NewClient("http://localhost:6969")
     
     // Or with custom timeout
-    client := helix.NewClient("http://localhost:6969", 
-        helix.WithTimeout(30*time.Second))
+    client = helix.NewClient(
+        "http://localhost:6969",
+        helix.WithTimeout(30*time.Second),
+    )
 }
-
 ```
 
 ### Basic Query Pattern
@@ -59,14 +58,24 @@ func main() {
 All queries follow this simple pattern:
 
 ```go
-response := client.Query("<endpoint>").ResponseMethod()
+res, err := client.Query("<endpoint>", /* optional options... */)
+if err != nil {
+    // handle error
+}
 
+// Choose how to handle the response:
+err = res.Scan(&destStruct)              // structured
+m, err := res.AsMap()                    // dynamic map
+raw := res.Raw()                         // raw bytes
 ```
 
 Where:
 
--   `<endpoint>` is your HelixQL query name
--   `ResponseMethod()` determines how you handle the response (e.g `.Scan(&pointerToStruct)`)
+- `<endpoint>` is your HelixQL query name
+- The response handling is done via methods on `*Response`:
+  - `Scan(...)` for typed decoding
+  - `AsMap()` for dynamic access
+  - `Raw()` for raw bytes
 
 ## Client Configuration
 
@@ -75,9 +84,10 @@ Where:
 Configure how long the client waits for responses:
 
 ```go
-client := helix.NewClient("http://localhost:6969", 
-    helix.WithTimeout(5*time.Second))
-
+client := helix.NewClient(
+    "http://localhost:6969",
+    helix.WithTimeout(5*time.Second),
+)
 ```
 
 ## Making Queries
@@ -114,9 +124,9 @@ QUERY get_users() =>
     users <- N<User>
     RETURN users 
 
-QUERY follow(followerId: ID, followedId: ID) =>
-    follower <- N<User>(followerId)
-    followed <- N<User>(followedId)
+QUERY follow(follower_id: ID, followed_id: ID) =>
+    follower <- N<User>(follower_id)
+    followed <- N<User>(followed_id)
     AddE<Follows>::From(follower)::To(followed)
     RETURN "Success" 
 
@@ -131,7 +141,7 @@ QUERY following(id: ID) =>
 
 ### Passing Data with WithData
 
-The `WithData` option lets you pass input data to your queries. It accepts multiple data types:
+The `WithData` option lets you pass input data to your queries. It accepts multiple data types.
 
 #### Using Maps (Recommended for flexibility)
 
@@ -140,7 +150,9 @@ userData := map[string]any{
     "name": "John",
     "age":  25,
 }
-client.Query("create_user", helix.WithData(userData))
+
+res, err := client.Query("create_user", helix.WithData(userData))
+// handle err and use res...
 ```
 
 #### Using Structs (Recommended for type safety)
@@ -150,22 +162,29 @@ type UserInput struct {
     Name string `json:"name"`
     Age  int    `json:"age"`
 }
+
 input := UserInput{Name: "John", Age: 25}
-client.Query("create_user", helix.WithData(input))
+
+res, err := client.Query("create_user", helix.WithData(input))
+// handle err and use res...
 ```
 
 #### Using JSON Strings
 
 ```go
 jsonData := `{"name": "John", "age": 25}`
-client.Query("create_user", helix.WithData(jsonData))
+
+res, err := client.Query("create_user", helix.WithData(jsonData))
+// handle err and use res...
 ```
 
 #### Using JSON Bytes
 
 ```go
 jsonBytes := []byte(`{"name": "John", "age": 25}`)
-client.Query("create_user", helix.WithData(jsonBytes))
+
+res, err := client.Query("create_user", helix.WithData(jsonBytes))
+// handle err and use res...
 ```
 
 ## Handling Responses
@@ -183,11 +202,16 @@ type CreateUserResponse struct {
     User User `json:"user"`
 }
 
-var response CreateUserResponse
-err := client.Query("create_user", helix.WithData(userData)).Scan(&response)
+res, err := client.Query("create_user", helix.WithData(userData))
 if err != nil {
     log.Fatal(err)
 }
+
+var response CreateUserResponse
+if err := res.Scan(&response); err != nil {
+    log.Fatal(err)
+}
+
 // Access: response.User
 ```
 
@@ -197,30 +221,48 @@ Extract only the fields you need from the response:
 
 ```go
 // Single field extraction
+res, err := client.Query("get_users")
+if err != nil {
+    log.Fatal(err)
+}
+
 var users []User
-err := client.Query("get_users").Scan(helix.WithDest("users", &users))
+if err := res.Scan(helix.WithDest("users", &users)); err != nil {
+    log.Fatal(err)
+}
 
 // Multiple field extraction
-var users []User
+res, err = client.Query("get_users_with_count")
+if err != nil {
+    log.Fatal(err)
+}
+
 var totalCount int
-err := client.Query("get_users_with_count").Scan(
+if err := res.Scan(
     helix.WithDest("users", &users),
     helix.WithDest("total_count", &totalCount),
-)
+); err != nil {
+    log.Fatal(err)
+}
 ```
 
 **When to use WithDest:**
 
--   You only need specific fields from a large response
--   The response contains multiple top-level fields
--   You want to avoid creating response wrapper structs
+- You only need specific fields from a large response
+- The response contains multiple top-level fields
+- You want to avoid creating response wrapper structs
 
 ### 2. AsMap() - Dynamic Access
 
 Get the response as a Go map for flexible access:
 
 ```go
-responseMap, err := client.Query("get_users").AsMap()
+res, err := client.Query("get_users")
+if err != nil {
+    log.Fatal(err)
+}
+
+responseMap, err := res.AsMap()
 if err != nil {
     log.Fatal(err)
 }
@@ -237,46 +279,36 @@ if usersList, ok := responseMap["users"].([]interface{}); ok {
 
 **When to use AsMap:**
 
--   Response structure is unknown or varies
--   For debugging and exploration
--   When you need flexible access to response data
+- Response structure is unknown or varies
+- For debugging and exploration
+- When you need flexible access to response data
 
 ### 3. Raw() - Maximum Control
 
 Get the raw byte response from HelixDB:
 
 ```go
-rawBytes, err := client.Query("get_users").Raw()
+res, err := client.Query("get_users")
 if err != nil {
     log.Fatal(err)
 }
+
+rawBytes := res.Raw()
 
 // Process raw JSON
 fmt.Println(string(rawBytes))
 
 // Manual unmarshaling
 var customResult MyCustomStruct
-err = json.Unmarshal(rawBytes, &customResult)
+if err := json.Unmarshal(rawBytes, &customResult); err != nil {
+    log.Fatal(err)
+}
 ```
 
 **When to use Raw:**
 
--   You need maximum control over response processing
--   For custom JSON unmarshaling logic
--   You just need to know if the operation succeeded or not
-
-## Error Handling
-
-The SDK provides detailed error information:
-
-```go
-err := client.Query("invalid_endpoint").Scan(&result)
-if err != nil {
-    // Errors include HTTP status codes and response body
-    log.Printf("Query failed: %v", err)
-    // Example error: "404: endpoint not found"
-}
-```
+- You need maximum control over response processing
+- For custom JSON unmarshaling logic
 
 ## Complete Example
 
@@ -306,8 +338,8 @@ type CreateUserResponse struct {
 }
 
 type FollowUserInput struct {
-	FollowerId string `json:"followerId"`
-	FollowedId string `json:"followedId"`
+	FollowerId string `json:"follower_id"`
+	FollowedId string `json:"followed_id"`
 }
 
 func main() {
@@ -324,9 +356,13 @@ func main() {
 		"now":   now,
 	}
 
-	var createResponse1 CreateUserResponse
-	err := client.Query("create_user", helix.WithData(userData1)).Scan(&createResponse1)
+	res, err := client.Query("create_user", helix.WithData(userData1))
 	if err != nil {
+		log.Fatal(err)
+	}
+
+	var createResponse1 CreateUserResponse
+	if err := res.Scan(&createResponse1); err != nil {
 		log.Fatal(err)
 	}
 
@@ -340,18 +376,26 @@ func main() {
 		"now":   now,
 	}
 
-	var createResponse2 CreateUserResponse
-	err = client.Query("create_user", helix.WithData(userData2)).Scan(&createResponse2)
+	res, err = client.Query("create_user", helix.WithData(userData2))
 	if err != nil {
+		log.Fatal(err)
+	}
+
+	var createResponse2 CreateUserResponse
+	if err := res.Scan(&createResponse2); err != nil {
 		log.Fatal(err)
 	}
 
 	fmt.Printf("\nCreated user 2: %+v\n", createResponse2.User)
 
 	// Get all users using WithDest
-	var users []User
-	err = client.Query("get_users").Scan(helix.WithDest("users", &users))
+	res, err = client.Query("get_users")
 	if err != nil {
+		log.Fatal(err)
+	}
+
+	var users []User
+	if err := res.Scan(helix.WithDest("users", &users)); err != nil {
 		log.Fatal(err)
 	}
 
@@ -363,32 +407,43 @@ func main() {
 		FollowedId: createResponse2.User.ID,
 	}
 
-	// Use Raw() for operations that don't return structured data
-	_, err = client.Query("follow", helix.WithData(followData)).Raw()
+	res, err = client.Query("follow", helix.WithData(followData))
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// Use Raw() for operations that don't return structured data
+	_ = res.Raw()
 
 	fmt.Printf("\n%s now follows %s\n", createResponse1.User.Name, createResponse2.User.Name)
 
 	// Get Bob's followers using WithDest
-	var followers []User
-	err = client.Query("followers",
-		helix.WithData(map[string]any{"id": createResponse2.User.ID})).
-		Scan(helix.WithDest("followers", &followers))
+	res, err = client.Query("followers",
+		helix.WithData(map[string]any{"id": createResponse2.User.ID}),
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("\n%s has %d followers:\n", createResponse2.User.Name, len(followers))
+	var followers []User
+	if err := res.Scan(helix.WithDest("followers", &followers)); err != nil {
+		log.Fatal(err)
+	}
 
+	fmt.Printf("\n%s has %d followers:\n", createResponse2.User.Name, len(followers))
 	for _, follower := range followers {
 		fmt.Printf("\t%s\n", follower.Name)
 	}
 
 	// Get Alice's following using AsMap for demonstration
-	followingMap, err := client.Query("following",
-		helix.WithData(map[string]any{"id": createResponse1.User.ID})).AsMap()
+	res, err = client.Query("following",
+		helix.WithData(map[string]any{"id": createResponse1.User.ID}),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	followingMap, err := res.AsMap()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -397,7 +452,9 @@ func main() {
 		fmt.Printf("\n%s is following %d users\n", createResponse1.User.Name, len(followingList))
 
 		for _, userFollowing := range followingList {
-			fmt.Printf("\t%s\n", userFollowing.(map[string]any)["name"])
+			if m, ok := userFollowing.(map[string]any); ok {
+				fmt.Printf("\t%v\n", m["name"])
+			}
 		}
 	}
 
@@ -407,36 +464,31 @@ func main() {
 
 This example demonstrates:
 
--   **Client initialization** with default settings
--   **Creating multiple users** with `WithData` and `Scan`
--   **Querying data** with field-specific extraction using `WithDest`
--   **Creating relationships** between users using `Raw()` for operations
--   **Fetching related data** (followers/following) with different response methods
--   **Using AsMap** for flexible response handling
+- **Client initialization** with default settings
+- **Creating multiple users** with `WithData` and `Scan`
+- **Querying data** with field-specific extraction using `WithDest`
+- **Creating relationships** between users using `Raw()` for operations
+- **Fetching related data** (followers/following) with different response methods
+- **Using AsMap** for flexible response handling
 
 ## Best Practices
 
 ### Choosing the Right Response Method
 
--   **Use `Scan()`** when you know the response structure and want type safety
--   **Use `Scan()` with `WithDest()`** when you only need specific fields from large responses
--   **Use `AsMap()`** for exploration, debugging, or when response structure varies
--   **Use `Raw()`** when you need custom processing or maximum control
-
-### Error Handling
-
-Always handle errors appropriately:
-
-```go
-if err := client.Query("endpoint").Scan(&result); err != nil {
-    // Log the error with context
-    log.Printf("Failed to execute query 'endpoint': %v", err)
-    // Handle the error based on your application's needs
-    return err
-}
-```
+- **Use `Scan()`** when you know the response structure and want type safety
+- **Use `Scan()` with `WithDest()`** when you only need specific fields from large responses
+- **Use `AsMap()`** for exploration, debugging, or when response structure varies
+- **Use `Raw()`** when you need custom processing or maximum control
 
 ### Input Data Types
 
--   **Prefer structs** for type safety and clearer code
--   **Use maps** for flexible input scenarios
+- **Prefer structs** for type safety and clearer code
+- **Use maps** for flexible input scenarios
+- **Avoid slices/arrays** as top-level input — HelixDB expects key–value objects
+- **Use JSON strings/bytes** only when you're manually preparing JSON
+
+---
+
+If you encounter issues or want to contribute, feel free to open an issue or submit a PR on the GitHub repository.
+
+Happy querying with HelixDB 🚀
