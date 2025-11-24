@@ -17,7 +17,7 @@ func FollowUser(data *FollowUserInput) error {
 	_, err := HelixClient.Query(
 		"follow",
 		helix.WithData(data),
-	).Raw()
+	)
 	if err != nil {
 		err = fmt.Errorf("Error while following: %v", err)
 		return err
@@ -27,30 +27,32 @@ func FollowUser(data *FollowUserInput) error {
 }
 
 func Followers(data map[string]any, users *[]User) error {
-	err := HelixClient.Query(
+	res, err := HelixClient.Query(
 		"followers",
 		helix.WithData(data),
-	).Scan(
-		helix.WithDest("followers", users),
 	)
 	if err != nil {
-		err = fmt.Errorf("Error while getting \"followers\": %v", err)
-		return err
+		return fmt.Errorf("Error while getting \"followers\": %v", err)
+	}
+
+	if err = res.Scan(helix.WithDest("followers", users)); err != nil {
+		return fmt.Errorf("Error while scanning the \"followers\" query result and populating the users slice: %v", err)
 	}
 
 	return nil
 }
 
 func Following(data map[string]any, users *[]User) error {
-	err := HelixClient.Query(
+	res, err := HelixClient.Query(
 		"following",
 		helix.WithData(data),
-	).Scan(
-		helix.WithDest("following", users),
 	)
 	if err != nil {
-		err = fmt.Errorf("Error while getting \"following\": %v", err)
-		return err
+		return fmt.Errorf("Error while getting \"following\": %v", err)
+	}
+
+	if err = res.Scan(helix.WithDest("following", users)); err != nil {
+		return fmt.Errorf("Error while scanning the \"following\" query result and populating the users slice: %v", err)
 	}
 
 	return nil

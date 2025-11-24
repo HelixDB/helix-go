@@ -9,9 +9,8 @@ import (
 	"reflect"
 )
 
-type helixResponse struct {
-	bytes []byte
-	err   error
+type Response struct {
+	body []byte
 }
 
 type QueryOption struct {
@@ -26,7 +25,7 @@ func WithData(data any) QueryOptionFunc {
 	}
 }
 
-func (c *Client) Query(endpoint string, opts ...QueryOptionFunc) *helixResponse {
+func (c *Client) Query(endpoint string, opts ...QueryOptionFunc) (*Response, error) {
 
 	option := QueryOption{}
 	for _, opt := range opts {
@@ -35,19 +34,13 @@ func (c *Client) Query(endpoint string, opts ...QueryOptionFunc) *helixResponse 
 
 	jsonData, err := marshalInput(option.data)
 	if err != nil {
-		return &helixResponse{
-			bytes: nil,
-			err:   fmt.Errorf("failed to marshal input data: %w", err),
-		}
+		return nil, fmt.Errorf("failed to marshal input data: %w", err)
 	}
 
 	url := c.host + endpoint
 	req, err := http.NewRequest("POST", url, bytes.NewReader(jsonData))
 	if err != nil {
-		return &helixResponse{
-			bytes: nil,
-			err:   fmt.Errorf("failed to create request: %w", err),
-		}
+		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -55,40 +48,32 @@ func (c *Client) Query(endpoint string, opts ...QueryOptionFunc) *helixResponse 
 
 	res, err := c.httpClient.Do(req)
 	if err != nil {
-		return &helixResponse{
-			bytes: nil,
-			err:   fmt.Errorf("failed to send request: %w", err),
-		}
+		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
 	defer res.Body.Close()
 
-	body, _ := io.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
 
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		return &helixResponse{
-			bytes: nil,
-			err:   fmt.Errorf("%d: %s", res.StatusCode, string(body)),
-		}
+		return nil, fmt.Errorf("%d: %s", res.StatusCode, string(body))
 	}
 
-	return &helixResponse{
-		bytes: body,
-		err:   nil,
-	}
+	return &Response{
+		body: body,
+	}, nil
 }
 
-func (r *helixResponse) Raw() ([]byte, error) {
-	return r.bytes, r.err
+func (r *Response) Raw() []byte {
+	return r.body
 }
 
-func (r *helixResponse) AsMap() (map[string]any, error) {
-
-	if r.err != nil {
-		return nil, r.err
-	}
+func (r *Response) AsMap() (map[string]any, error) {
 
 	var mapResponse map[string]any
-	err := json.Unmarshal(r.bytes, &mapResponse)
+	err := json.Unmarshal(r.body, &mapResponse)
 	if err != nil {
 		return nil, err
 	}
@@ -110,11 +95,8 @@ func WithDest(name string, dest any) ScanOptionFunc {
 	}
 }
 
-func (r *helixResponse) Scan(args ...any) error {
-
-	if r.err != nil {
-		return r.err
-	}
+// Double json.Unmarshal when `len(args) == 1` and `WithDest(...)` is being used and when `len(args) > 1`
+func (r *Response) Scan(args ...any) error {
 
 	if len(args) == 0 {
 		return fmt.Errorf("scan destination is expected")
@@ -125,13 +107,12 @@ func (r *helixResponse) Scan(args ...any) error {
 		if err != nil {
 			optFunc, err := validateDestOption(args[0])
 			if err != nil {
-				fmt.Println(0)
 				return err
 			}
 
 			var jsonData map[string]json.RawMessage
 
-			err = json.Unmarshal(r.bytes, &jsonData)
+			err = json.Unmarshal(r.body, &jsonData)
 			if err != nil {
 				return fmt.Errorf("invalid json response: %w", err)
 			}
@@ -144,21 +125,21 @@ func (r *helixResponse) Scan(args ...any) error {
 			return nil
 		}
 
-		return json.Unmarshal(r.bytes, args[0])
+		return json.Unmarshal(r.body, args[0])
 
 	}
 
 	var jsonData map[string]json.RawMessage
 
-	err := json.Unmarshal(r.bytes, &jsonData)
+	err := json.Unmarshal(r.body, &jsonData)
 	if err != nil {
 		return fmt.Errorf("invalid json response: %w", err)
 	}
 
-	for _, arg := range args {
+	for i, arg := range args {
 		optFunc, ok := arg.(ScanOptionFunc)
 		if !ok {
-			return fmt.Errorf("invalid scan argument type %T (expected struct pointer, map pointer, or WithDest(...))", arg)
+			return fmt.Errorf("invalid scan argument at position %d: got %T (when passing multiple arguments, only WithDest(fieldName, &dest) is allowed)", i, arg)
 		}
 
 		err := scanOption(optFunc, jsonData)
@@ -208,7 +189,7 @@ func validateDestPointer(dest any) error {
 func validateDestOption(dest any) (ScanOptionFunc, error) {
 	optFunc, ok := dest.(ScanOptionFunc)
 	if !ok {
-		return nil, fmt.Errorf("invalid scan argument type %T (expected struct pointer, map pointer, or WithDest(...))", dest)
+		return nil, fmt.Errorf("invalid scan argument type %T (expected struct pointer, map pointer, WithDest(...))", dest)
 	}
 
 	return optFunc, nil
@@ -235,6 +216,9 @@ func marshalInput(input any) ([]byte, error) {
 	val := reflect.ValueOf(input)
 
 	if val.Kind() == reflect.Ptr {
+		if val.IsNil() {
+			return nil, fmt.Errorf("input pointer cannot be nil")
+		}
 		val = val.Elem()
 	}
 

@@ -6,10 +6,17 @@ import (
 	"time"
 
 	"example/internal"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
 	// Initialize Helix client
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("Error while loading .env file: %v", err)
+	}
+
 	internal.ConfigHelix()
 	fmt.Println("✓ Helix client initialized")
 
@@ -27,7 +34,7 @@ func main() {
 
 	var createUserResponse internal.CreateUserResponse
 
-	err := internal.CreateUser(newUser, &createUserResponse)
+	err = internal.CreateUser(newUser, &createUserResponse)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -63,7 +70,7 @@ func main() {
 	// Get all users
 	fmt.Println("\n--- Retrieving all users ---")
 	var users []internal.User
-	err = internal.GetAllUsers(&users)
+	res, err := internal.GetAllUsers(&users)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -72,6 +79,15 @@ func main() {
 	for _, user := range users {
 		fmt.Printf("%+v\n", user)
 	}
+
+	usersMap, err := res.AsMap()
+	if err != nil {
+		err = fmt.Errorf("Error while converting the result from the `get_users` query to map: %v", err)
+		log.Fatal(err)
+	}
+
+	fmt.Println("\nUsers in the `map[string]any` datatype:")
+	fmt.Printf("%v\n", usersMap)
 
 	// Add follow relationships
 	fmt.Println("\n--- Creating follow relationships ---")
@@ -244,7 +260,7 @@ func main() {
 	// Search users by preference
 	fmt.Println("\n--- Search Users by Preference: \"cats\" ---")
 	var usersSearchResults []internal.User
-	err = internal.SearchUsersByPreference(
+	body, err := internal.SearchUsersByPreference(
 		map[string]any{
 			"preference": "cats",
 			"limit":      5,
@@ -254,7 +270,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("Users Search Result:\n")
+
+	if len(body) >= 10 {
+		fmt.Printf("First few bytes from the search result:\n")
+		fmt.Printf("% x\n", body[:10])
+	}
+
+	fmt.Printf("\nUsers Search Result:\n")
 	for _, user := range usersSearchResults {
 		fmt.Printf("%+v\n", user.Name)
 	}
