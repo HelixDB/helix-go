@@ -3,13 +3,6 @@ N::User {
     age: U32,
     email: String,
     created_at: I32,
-    updated_at: I32,
-}
-
-N::Post {
-    content: String,
-    created_at: I32,
-    updated_at: I32,
 }
 
 E::Follows {
@@ -20,10 +13,11 @@ E::Follows {
     }
 }
 
-E::Created {
+V::Preference {
+    preference: String,
+}
+
+E::UserPreference {
     From: User,
-    To: Post,
-    Properties: {
-        created_at: I32,
-    }
+    To: Preference,
 }
