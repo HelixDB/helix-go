@@ -6,17 +6,11 @@ import (
 	"time"
 
 	"example/internal"
-
-	"github.com/joho/godotenv"
 )
 
 func main() {
-	// Initialize Helix client
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("Error while loading .env file: %v", err)
-	}
 
+	// Initialize Helix client
 	internal.ConfigHelix()
 	fmt.Println("✓ Helix client initialized")
 
@@ -34,7 +28,7 @@ func main() {
 
 	var createUserResponse internal.CreateUserResponse
 
-	err = internal.CreateUser(newUser, &createUserResponse)
+	err := internal.CreateUser(newUser, &createUserResponse)
 	if err != nil {
 		log.Fatal(err)
 	}
